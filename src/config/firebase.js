@@ -43,7 +43,7 @@ const signup = async (username, email, password) => {
 
         // Add an empty chatData array to the "chats" collection for the new user
         await setDoc(doc(db, "chats", user.uid), {
-            chatData: [], // Empty array to store chat data
+            chatsData: [], // Empty array to store chat data
         });
     } catch (error) {
         console.error(error);

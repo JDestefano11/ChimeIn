@@ -53,41 +53,49 @@ const AppContextProvider = (props) => {
   };
 
   useEffect(() => {
-    // Only run this effect if userData and its uid property exist
+    console.log("Chat loading process initiated for user:", userData?.uid);
+
     if (userData?.uid) {
-      // Create a reference to the user's chat document in Firestore
       const chatRef = doc(db, "chats", userData.uid);
+      console.log("Chat reference created:", chatRef.path);
 
-      // Set up a real-time listener for changes to the chat document
       const unSub = onSnapshot(chatRef, async (docSnapshot) => {
-        if (docSnapshot.exists()) {
-          // If the chat document exists, retrieve the chat data
-          const chatItems = docSnapshot.data().chatData || [];
+        console.log(
+          "Chat snapshot received. Document exists:",
+          docSnapshot.exists()
+        );
 
-          // Map over each chat item and fetch the corresponding user data
+        if (docSnapshot.exists()) {
+          const chatItems = docSnapshot.data().chatsData || [];
+          console.log("Number of chat items retrieved:", chatItems.length);
+
           const tempData = await Promise.all(
             chatItems.map(async (item) => {
+              console.log("Fetching user data for chat item:", item.rID);
               const userRef = doc(db, "users", item.rID);
               const userSnap = await getDoc(userRef);
               const userData = userSnap.data();
-              // Combine chat item data with user data
               return { ...item, userData };
             })
           );
 
-          // Sort the chat data by updatedAt timestamp in descending order
+          console.log("Processed chat data:", tempData);
           setChatData(tempData.sort((a, b) => b.updatedAt - a.updatedAt));
+          console.log("Chat data sorted and set in state");
         } else {
-          // If the chat document doesn't exist, create an empty one
+          console.log("No existing chat document. Creating empty chat data.");
           await setDoc(chatRef, { chatData: [] });
           setChatData([]);
+          console.log("Empty chat data set in state");
         }
       });
 
-      // Clean up the listener when the component unmounts or userData changes
-      return () => unSub();
+      return () => {
+        console.log("Cleaning up chat listener for user:", userData.uid);
+        unSub();
+      };
     }
-  }, [userData]); // Re-run this effect when userData changes
+  }, [userData]);
 
   // Value object to be passed down to the context consumers
   const value = {
