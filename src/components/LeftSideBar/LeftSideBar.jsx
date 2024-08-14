@@ -2,47 +2,78 @@ import React, { useState, useEffect, useRef } from "react";
 import "./LeftSideBar.css";
 import assets from "../../../public/assets/assets";
 import { useNavigate } from "react-router";
+import { getFirestore, collection, getDocs } from "firebase/firestore";
 
 const LeftSideBar = () => {
-  const navigate = useNavigate();
-
-  // Step 1: Use the useState hook to manage the state of the sub-menu
+  const navigate = useNavigate(); // Hook for programmatic navigation
   const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const menuRef = useRef(null); // Reference to the menu element for detecting clicks outside
 
-  // Step 2: Use the useRef hook to create a reference to the menu element
-  const menuRef = useRef(null);
-
-  // Step 3: Define a function to toggle the sub-menu state
+  // Function to toggle the submenu visibility
   const toggleSubMenu = () => {
     setIsSubMenuOpen(!isSubMenuOpen);
   };
 
-  // Step 4: Define a function to handle clicks outside the menu area
+  // Function to close the submenu when clicking outside of it
   const handleClickOutside = (event) => {
-    // Check if the clicked target is outside the menu area
     if (menuRef.current && !menuRef.current.contains(event.target)) {
-      // If it is, close the sub-menu by setting isSubMenuOpen to false
-      setIsSubMenuOpen(false);
+      setIsSubMenuOpen(false); // Close submenu if click is outside the menu element
     }
   };
 
-  // Step 5: Use the useEffect hook to add and remove an event listener
+  // Effect to add and remove event listener for clicks outside the submenu
   useEffect(() => {
-    // Add an event listener for the "mousedown" event on the document
     document.addEventListener("mousedown", handleClickOutside);
-
-    // Return a cleanup function to remove the event listener when the component unmounts
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Function to handle search logic, triggered when searchTerm changes
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (searchTerm.trim() === "") {
+      setSearchResults([]); // Clear results if the search term is empty
+      return;
+    }
+
+    const db = getFirestore(); // Initialize Firestore
+    const usersRef = collection(db, "users"); // Reference to the users collection
+
+    try {
+      // Fetch all users
+      const querySnapshot = await getDocs(usersRef);
+      const allUsers = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      // Filter users by name containing the search term (case-insensitive)
+      const filteredResults = allUsers.filter((user) =>
+        user.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      console.log("Search results:", filteredResults); // Debugging line to check search results
+      setSearchResults(filteredResults); // Update search results state
+    } catch (error) {
+      console.error("Error searching for users:", error); // Handle errors in the search process
+    }
+  };
+
+  // Effect to perform the search whenever the searchTerm changes
+  useEffect(() => {
+    if (searchTerm) {
+      handleSearch({ preventDefault: () => {} }); // Call handleSearch function
+    }
+  }, [searchTerm]);
 
   return (
     <div className="ls">
       <div className="ls-top">
         <div className="ls-nav">
           <img src={assets.logo} className="logo" alt="" />
-          {/* Step 6: Associate the menu element with the reference */}
           <div className="menu" ref={menuRef}>
             <img
               src={assets.menu_icon}
@@ -61,21 +92,38 @@ const LeftSideBar = () => {
         </div>
         <div className="ls-search">
           <img src={assets.search_icon} alt="" />
-          <input type="text" placeholder="Search here.." />
+          <input
+            type="text"
+            placeholder="Search users.."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)} // Update searchTerm state as user types
+          />
         </div>
       </div>
       <div className="ls-list">
-        {Array(12)
-          .fill("")
-          .map((item, index) => (
-            <div className="friends" key={index}>
-              <img src={assets.profile_img} alt="" />
-              <div>
-                <p>John Doe</p>
-                <span>Hello, how are you?</span>
+        {searchResults.length > 0
+          ? searchResults.map((user) => (
+              <div className="friends" key={user.id}>
+                <img src={user.pic || assets.profile_img} alt="" />{" "}
+                {/* Display user's profile picture or a default image */}
+                <div>
+                  <p>{user.name}</p> {/* Display user's name */}
+                  <span>{user.email || "No email provided"}</span>{" "}
+                  {/* Display user's email or a placeholder */}
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          : Array(12)
+              .fill("")
+              .map((item, index) => (
+                <div className="friends" key={index}>
+                  <img src={assets.profile_img} alt="" />
+                  <div>
+                    <p>John Doe</p>
+                    <span>Hello, how are you?</span>
+                  </div>
+                </div>
+              ))}
       </div>
     </div>
   );
