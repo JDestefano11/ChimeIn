@@ -21,12 +21,25 @@ const LeftSideBar = () => {
   const { chatData, userData, setChatUser, setMessagesId, setChatVisible } =
     useContext(AppContext); // Accessing context values
 
-  const [isSubMenuOpen, setIsSubMenuOpen] = useState(false); // State for submenu visibility
-  const [searchTerm, setSearchTerm] = useState(""); // State for search input
-  const [searchResults, setSearchResults] = useState([]); // State for search results
-  const [selectedUser, setSelectedUser] = useState(null); // State for selected user
-  const menuRef = useRef(null); // Ref for menu DOM element
-  const db = getFirestore(); // Firestore instance
+  const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [excludedUsers, setExcludedUsers] = useState([]);
+  const menuRef = useRef(null); //
+  const db = getFirestore();
+
+  // Initialize excluded users from localStorage
+  useEffect(() => {
+    const storedExcludedUsers =
+      JSON.parse(localStorage.getItem("excludedUsers")) || [];
+    setExcludedUsers(storedExcludedUsers);
+  }, []);
+
+  // Update localStorage when excludedUsers state changes
+  useEffect(() => {
+    localStorage.setItem("excludedUsers", JSON.stringify(excludedUsers));
+  }, [excludedUsers]);
 
   // Toggle submenu visibility
   const toggleSubMenu = () => {
@@ -63,9 +76,12 @@ const LeftSideBar = () => {
         ...doc.data(),
       }));
 
-      const filteredResults = allUsers.filter(
-        (user) => user.name.toLowerCase().includes(searchTerm.toLowerCase()) // Filter users based on search term
-      );
+      // Filter out users who are already in the chat
+      const filteredResults = allUsers
+        .filter((user) => !excludedUsers.includes(user.id)) // Exclude users from the excluded list
+        .filter((user) =>
+          user.name.toLowerCase().includes(searchTerm.toLowerCase())
+        ); // Filter users based on search term
 
       setSearchResults(filteredResults);
     } catch (error) {
@@ -75,7 +91,7 @@ const LeftSideBar = () => {
 
   useEffect(() => {
     handleSearch(); // Perform search when search term changes
-  }, [searchTerm]);
+  }, [searchTerm, excludedUsers]); // Include excludedUsers in dependency array
 
   // Handle user selection and initiate chat
   const handleUserClick = async (user) => {
@@ -85,7 +101,7 @@ const LeftSideBar = () => {
       if (!user) {
         throw new Error("No user selected");
       }
-      await addChat(user); // Add chat functionality
+      await addChat(user);
       console.log("Success: Chat with user initiated");
     } catch (error) {
       console.error("Error adding chat:", error);
@@ -139,6 +155,9 @@ const LeftSideBar = () => {
       });
       setMessagesId(newMessageRef.id);
       setChatVisible(true); // Show chat
+
+      // Update excluded users list
+      setExcludedUsers((prevExcludedUsers) => [...prevExcludedUsers, user.id]);
     } catch (error) {
       console.error("Error adding chat:", error);
     }
