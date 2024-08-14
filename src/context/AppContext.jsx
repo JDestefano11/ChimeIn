@@ -1,48 +1,47 @@
-import { doc, getDoc, onSnapshot, updateDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { createContext, useEffect, useState } from "react";
-import { db, auth } from "../config/firebase";
+import { auth, db } from "../config/firebase";
+import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 
 export const AppContext = createContext();
 
 const AppContextProvider = (props) => {
-  const navigate = useNavigate();
-
   const [userData, setUserData] = useState(null);
   const [chatData, setChatData] = useState(null);
-  const [chatUser, setChatUser] = useState(null);
   const [messagesId, setMessagesId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [chatUser, setChatUser] = useState(null);
   const [chatVisible, setChatVisible] = useState(false);
+  const navigate = useNavigate();
 
-  // Function to load user data from Firestore
+  // Function to load user data based on user ID
   const loadUserData = async (uid) => {
     try {
-      // Get a reference to the user document in Firestore
       const userRef = doc(db, "users", uid);
-
-      // Fetch the user document data
       const userSnap = await getDoc(userRef);
       const userData = userSnap.data();
-
-      // Update the userData state with the fetched data
       setUserData(userData);
 
-      // Redirect to the appropriate route based on user data
-      if (userData && userData.avatar && userData.name) {
-        // If the user has an avatar and name, navigate to the /chat route
+      // Navigate to different pages based on user data availability
+      if (userData.avatar && userData.name) {
         navigate("/chat");
       } else {
-        // If the user doesn't have an avatar or name, navigate to the /profile route
         navigate("/profile");
       }
 
-      // Update the user's lastSeen field in Firestore
+      // Update user's last seen time
       await updateDoc(userRef, {
         lastSeen: Date.now(),
       });
 
-      // Set an interval to update the user's lastSeen field every 60 seconds
-      const interval = setInterval(async () => {
+      // Clear existing interval if any
+      if (window.chatUpdateInterval) {
+        clearInterval(window.chatUpdateInterval);
+      }
+
+      // Set up an interval to update user's last seen time every minute
+      window.chatUpdateInterval = setInterval(async () => {
         if (auth.currentUser) {
           await updateDoc(userRef, {
             lastSeen: Date.now(),
@@ -50,69 +49,76 @@ const AppContextProvider = (props) => {
         }
       }, 60000);
     } catch (error) {
-      // Log any errors that occur while loading user data
-      console.error("Error loading user data:", error);
+      toast.error(error.message); // Show error message using toast
     }
   };
 
+  // Effect to handle real-time updates to chat data
   useEffect(() => {
-    console.log("Chat loading process initiated for user:", userData?.uid);
-
-    if (userData?.uid) {
-      const chatRef = doc(db, "chats", userData.uid);
-      console.log("Chat reference created:", chatRef.path);
-
-      const unSub = onSnapshot(chatRef, async (docSnapshot) => {
-        console.log(
-          "Chat snapshot received. Document exists:",
-          docSnapshot.exists()
-        );
-
-        if (docSnapshot.exists()) {
-          const chatItems = docSnapshot.data().chatsData || [];
-          console.log("Number of chat items retrieved:", chatItems.length);
-
-          const tempData = await Promise.all(
-            chatItems.map(async (item) => {
-              console.log("Fetching user data for chat item:", item.rID);
-              const userRef = doc(db, "users", item.rID);
-              const userSnap = await getDoc(userRef);
-              const userData = userSnap.data();
-              return { ...item, userData };
-            })
-          );
-
-          console.log("Processed chat data:", tempData);
-          setChatData(tempData.sort((a, b) => b.updatedAt - a.updatedAt));
-          console.log("Chat data sorted and set in state");
-        } else {
-          console.log("No existing chat document. Creating empty chat data.");
-          await setDoc(chatRef, { chatData: [] });
-          setChatData([]);
-          console.log("Empty chat data set in state");
+    if (userData) {
+      const chatRef = doc(db, "chats", userData.id);
+      const unSub = onSnapshot(chatRef, async (res) => {
+        const chatItems = res.data().chatsData;
+        const tempData = [];
+        for (const item of chatItems) {
+          const userRef = doc(db, "users", item.rId);
+          const userSnap = await getDoc(userRef);
+          const userData = userSnap.data();
+          tempData.push({ ...item, userData });
         }
+        setChatData(tempData.sort((a, b) => b.updatedAt - a.updatedAt)); // Sort chat data by latest update
       });
 
+      // Cleanup on unmount: unsubscribe from chat updates and clear interval
       return () => {
-        console.log("Cleaning up chat listener for user:", userData.uid);
         unSub();
+        if (window.chatUpdateInterval) {
+          clearInterval(window.chatUpdateInterval);
+        }
       };
     }
   }, [userData]);
 
-  // Value object to be passed down to the context consumers
+  // Effect to periodically fetch and update chat data
+  useEffect(() => {
+    if (userData) {
+      const fetchChatData = async () => {
+        const chatRef = doc(db, "chats", userData.id);
+        const data = await getDoc(chatRef);
+        const chatItems = data.data().chatsData;
+        const tempData = [];
+        for (const item of chatItems) {
+          const userRef = doc(db, "users", item.rId);
+          const userSnap = await getDoc(userRef);
+          const userData = userSnap.data();
+          tempData.push({ ...item, userData });
+        }
+        setChatData(tempData.sort((a, b) => b.updatedAt - a.updatedAt)); // Sort chat data by latest update
+      };
+
+      const intervalId = setInterval(fetchChatData, 10000); // Fetch chat data every 10 seconds
+
+      // Cleanup on unmount: clear interval
+      return () => {
+        clearInterval(intervalId);
+      };
+    }
+  }, [userData]);
+
+  // Provide context values to child components
   const value = {
     userData,
     setUserData,
+    loadUserData,
     chatData,
-    setChatData,
-    chatUser,
-    setChatUser,
     messagesId,
     setMessagesId,
+    chatUser,
+    setChatUser,
     chatVisible,
     setChatVisible,
-    loadUserData,
+    messages,
+    setMessages,
   };
 
   return (
