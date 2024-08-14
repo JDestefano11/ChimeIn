@@ -10,6 +10,9 @@ const AppContextProvider = (props) => {
 
   const [userData, setUserData] = useState(null);
   const [chatData, setChatData] = useState(null);
+  const [chatUser, setChatUser] = useState(null);
+  const [messagesId, setMessagesId] = useState(null);
+  const [chatVisible, setChatVisible] = useState(false);
 
   // Function to load user data from Firestore
   const loadUserData = async (uid) => {
@@ -103,6 +106,12 @@ const AppContextProvider = (props) => {
     setUserData,
     chatData,
     setChatData,
+    chatUser,
+    setChatUser,
+    messagesId,
+    setMessagesId,
+    chatVisible,
+    setChatVisible,
     loadUserData,
   };
 
