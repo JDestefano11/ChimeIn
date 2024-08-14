@@ -17,25 +17,37 @@ const ProfileUpdate = () => {
   const [uid, setUid] = useState("");
 
   useEffect(() => {
+    // Set up a listener for changes in authentication state
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        // User is signed in
         setUid(user.uid);
+
+        // Create a reference to the user's document in Firestore
         const docRef = doc(db, "users", user.uid);
+
+        // Fetch the user's document
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
+          // If the document exists, extract user data
           const userData = docSnap.data();
+
+          // Update state with user data if available
           if (userData.name) setName(userData.name);
           if (userData.bio) setBio(userData.bio);
           if (userData.avatar) setImageUrl(userData.avatar);
         } else {
+          // If the document doesn't exist, redirect to home page
           navigate("/");
         }
       }
+      // If user is not signed in, the component will not update
     });
 
+    // Clean up the listener when the component unmounts
     return () => unsubscribe();
-  }, [navigate]);
+  }, [navigate]); // Re-run effect if navigate function changes
 
   const handleSubmit = async (e) => {
     e.preventDefault();

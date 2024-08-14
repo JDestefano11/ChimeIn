@@ -27,10 +27,10 @@ const AppContextProvider = (props) => {
       // Redirect to the appropriate route based on user data
       if (userData && userData.avatar && userData.name) {
         // If the user has an avatar and name, navigate to the /chat route
-        navigate("/profile");
+        navigate("/chat");
       } else {
         // If the user doesn't have an avatar or name, navigate to the /profile route
-        navigate("/chat");
+        navigate("/profile");
       }
 
       // Update the user's lastSeen field in Firestore
