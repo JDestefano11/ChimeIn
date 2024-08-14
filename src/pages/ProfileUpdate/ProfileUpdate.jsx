@@ -1,67 +1,68 @@
 import "./ProfileUpdate.css";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { auth, db } from "../../config/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import upload from "../../lib/upload";
 import assets from "../../../public/assets/assets";
+import { AppContext } from "../../context/AppContext";
 
 const ProfileUpdate = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  // Access user data from global context
+  const { userData, setUserData } = useContext(AppContext);
 
+  // Local state for form inputs
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [uid, setUid] = useState("");
 
   useEffect(() => {
-    // Set up a listener for changes in authentication state
+    // Set up listener for authentication state changes
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // User is signed in
         setUid(user.uid);
-
-        // Create a reference to the user's document in Firestore
         const docRef = doc(db, "users", user.uid);
-
-        // Fetch the user's document
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          // If the document exists, extract user data
-          const userData = docSnap.data();
-
-          // Update state with user data if available
-          if (userData.name) setName(userData.name);
-          if (userData.bio) setBio(userData.bio);
-          if (userData.avatar) setImageUrl(userData.avatar);
+          const data = docSnap.data();
+          // Update global context and local state with user data
+          setUserData(data);
+          setName(data.name || "");
+          setBio(data.bio || "");
+          setImageUrl(data.avatar || "");
         } else {
-          // If the document doesn't exist, redirect to home page
           navigate("/");
         }
       }
-      // If user is not signed in, the component will not update
     });
 
-    // Clean up the listener when the component unmounts
+    // Clean up listener on component unmount
     return () => unsubscribe();
-  }, [navigate]); // Re-run effect if navigate function changes
+  }, [navigate, setUserData]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
       const userRef = doc(db, "users", uid);
-
-      await updateDoc(userRef, {
+      const updatedData = {
         name: name,
         bio: bio,
         avatar: imageUrl,
-      });
+      };
 
+      // Update Firestore document
+      await updateDoc(userRef, updatedData);
+      // Update global context
+      setUserData((prevData) => ({ ...prevData, ...updatedData }));
       console.log("Profile updated successfully!");
+      // Navigate to chat page after successful update
+      navigate("/chat");
     } catch (error) {
       console.error("Error updating profile:", error);
     }
@@ -70,7 +71,10 @@ const ProfileUpdate = () => {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Set local URL for immediate preview
+      setImageUrl(URL.createObjectURL(file));
       try {
+        // Upload image and get remote URL
         const url = await upload(file);
         setImageUrl(url);
       } catch (error) {
@@ -79,6 +83,7 @@ const ProfileUpdate = () => {
     }
   };
 
+  // Trigger file input click when profile image is clicked
   const handleImageClick = () => {
     fileInputRef.current.click();
   };

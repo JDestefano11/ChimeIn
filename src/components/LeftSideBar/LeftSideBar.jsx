@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./LeftSideBar.css";
 import assets from "../../../public/assets/assets";
+import { useNavigate } from "react-router";
 
 const LeftSideBar = () => {
+  const navigate = useNavigate();
+
   // Step 1: Use the useState hook to manage the state of the sub-menu
   const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
 
@@ -49,7 +52,7 @@ const LeftSideBar = () => {
             />
             {isSubMenuOpen && (
               <div className="sub-menu">
-                <p>Edit Profile</p>
+                <p onClick={() => navigate("/profile")}>Edit Profile</p>
                 <hr />
                 <p>Logout</p>
               </div>
