@@ -104,7 +104,10 @@ const LeftSideBar = () => {
         {searchResults.length > 0
           ? searchResults.map((user) => (
               <div className="friends" key={user.id}>
-                <img src={user.pic || assets.profile_img} alt="" />{" "}
+                <img
+                  src={user.avatar || assets.profile_img}
+                  alt={`${user.name}'s profile`}
+                />
                 {/* Display user's profile picture or a default image */}
                 <div>
                   <p>{user.name}</p> {/* Display user's name */}
@@ -115,9 +118,9 @@ const LeftSideBar = () => {
             ))
           : Array(12)
               .fill("")
-              .map((item, index) => (
+              .map((_, index) => (
                 <div className="friends" key={index}>
-                  <img src={assets.profile_img} alt="" />
+                  <img src={assets.profile_img} alt="Default profile" />
                   <div>
                     <p>John Doe</p>
                     <span>Hello, how are you?</span>
