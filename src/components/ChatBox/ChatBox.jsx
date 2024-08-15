@@ -7,6 +7,7 @@ import { onSnapshot, doc } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { toast } from "react-toastify";
 import { updateDoc, arrayUnion, getDoc } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const ChatBox = () => {
   const { userData, messagesId, chatUser, messages, setMessages } =
@@ -15,13 +16,14 @@ const ChatBox = () => {
   const messageEndRef = useRef(null);
   const [enlargedImage, setEnlargedImage] = useState(null);
 
-  const sendMessage = async () => {
+  const sendMessage = async (imageUrl = null) => {
     try {
-      if (input && messagesId) {
+      if ((input || imageUrl) && messagesId) {
         await updateDoc(doc(db, "messages", messagesId), {
           messages: arrayUnion({
             sId: userData.id,
             text: input,
+            image: imageUrl,
             createdAt: new Date(),
           }),
         });
@@ -66,8 +68,10 @@ const ChatBox = () => {
   useEffect(() => {
     if (messagesId) {
       const unSub = onSnapshot(doc(db, "messages", messagesId), (res) => {
-        setMessages(res.data().messages.reverse());
-        console.log(res.data().messages.reverse());
+        // Ensure messages are sorted in ascending order of creation
+        setMessages(
+          res.data().messages.sort((a, b) => a.createdAt - b.createdAt)
+        );
       });
 
       return () => {
@@ -85,11 +89,22 @@ const ChatBox = () => {
   }, [messages]);
 
   const handleSendMessage = () => {
-    // Implement send message functionality here
+    sendMessage();
   };
 
-  const handleImageUpload = (event) => {
-    // Implement image upload functionality here
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      try {
+        const storage = getStorage();
+        const imageRef = ref(storage, `images/${Date.now()}_${file.name}`);
+        await uploadBytes(imageRef, file);
+        const imageUrl = await getDownloadURL(imageRef);
+        await sendMessage(imageUrl);
+      } catch (error) {
+        toast.error(error.message);
+      }
+    }
   };
 
   return chatUser ? (
@@ -112,9 +127,7 @@ const ChatBox = () => {
         {messages.map((message, index) => (
           <div
             key={index}
-            className={
-              message.senderId === userData.id ? "s-message" : "r-message"
-            }
+            className={message.sId === userData.id ? "s-message" : "r-message"}
           >
             {message.image && (
               <img
@@ -130,7 +143,7 @@ const ChatBox = () => {
                 src={chatUser.userData?.avatar || assets.profile_img}
                 alt="Profile"
               />
-              <p>{message.timestamp}</p>
+              <p>{new Date(message.createdAt.toDate()).toLocaleTimeString()}</p>
             </div>
           </div>
         ))}
@@ -176,7 +189,7 @@ const ChatBox = () => {
           />
         </label>
         <FiSend
-          onClick={sendMessage}
+          onClick={handleSendMessage}
           style={{
             color: "#4c4c9d",
             fontSize: "24px",
