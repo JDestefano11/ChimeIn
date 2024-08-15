@@ -15,7 +15,6 @@ const AppContextProvider = (props) => {
   const [chatVisible, setChatVisible] = useState(false);
   const navigate = useNavigate();
 
-  // Function to load user data based on user ID
   const loadUserData = async (uid) => {
     try {
       const userRef = doc(db, "users", uid);
@@ -23,24 +22,20 @@ const AppContextProvider = (props) => {
       const userData = userSnap.data();
       setUserData(userData);
 
-      // Navigate to different pages based on user data availability
       if (userData.avatar && userData.name) {
         navigate("/chat");
       } else {
         navigate("/profile");
       }
 
-      // Update user's last seen time
       await updateDoc(userRef, {
         lastSeen: Date.now(),
       });
 
-      // Clear existing interval if any
       if (window.chatUpdateInterval) {
         clearInterval(window.chatUpdateInterval);
       }
 
-      // Set up an interval to update user's last seen time every minute
       window.chatUpdateInterval = setInterval(async () => {
         if (auth.currentUser) {
           await updateDoc(userRef, {
@@ -49,11 +44,10 @@ const AppContextProvider = (props) => {
         }
       }, 60000);
     } catch (error) {
-      toast.error(error.message); // Show error message using toast
+      toast.error(error.message);
     }
   };
 
-  // Effect to handle real-time updates to chat data
   useEffect(() => {
     if (userData) {
       const chatRef = doc(db, "chats", userData.id);
@@ -66,10 +60,9 @@ const AppContextProvider = (props) => {
           const userData = userSnap.data();
           tempData.push({ ...item, userData });
         }
-        setChatData(tempData.sort((a, b) => b.updatedAt - a.updatedAt)); // Sort chat data by latest update
+        setChatData(tempData.sort((a, b) => b.updatedAt - a.updatedAt));
       });
 
-      // Cleanup on unmount: unsubscribe from chat updates and clear interval
       return () => {
         unSub();
         if (window.chatUpdateInterval) {
@@ -79,7 +72,6 @@ const AppContextProvider = (props) => {
     }
   }, [userData]);
 
-  // Effect to periodically fetch and update chat data
   useEffect(() => {
     if (userData) {
       const fetchChatData = async () => {
@@ -93,19 +85,17 @@ const AppContextProvider = (props) => {
           const userData = userSnap.data();
           tempData.push({ ...item, userData });
         }
-        setChatData(tempData.sort((a, b) => b.updatedAt - a.updatedAt)); // Sort chat data by latest update
+        setChatData(tempData.sort((a, b) => b.updatedAt - a.updatedAt));
       };
 
-      const intervalId = setInterval(fetchChatData, 10000); // Fetch chat data every 10 seconds
+      const intervalId = setInterval(fetchChatData, 10000);
 
-      // Cleanup on unmount: clear interval
       return () => {
         clearInterval(intervalId);
       };
     }
   }, [userData]);
 
-  // Provide context values to child components
   const value = {
     userData,
     setUserData,
@@ -119,6 +109,7 @@ const AppContextProvider = (props) => {
     setChatVisible,
     messages,
     setMessages,
+    setChatData,
   };
 
   return (

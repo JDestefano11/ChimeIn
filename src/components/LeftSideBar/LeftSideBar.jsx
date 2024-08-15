@@ -44,18 +44,23 @@ const LeftSideBar = () => {
   const menuRef = useRef(null);
   const db = getFirestore();
 
-  // Fetch chat data on component mount or when userData changes
+  // Fetch chat data on component mountn or when usrData changes
   useEffect(() => {
     const fetchChatData = async () => {
       if (userData && (!chatData || chatData.length === 0)) {
         setIsLoading(true);
-        const chatsRef = collection(db, "chats");
-        const userChatsDoc = await getDoc(doc(chatsRef, userData.id));
-        if (userChatsDoc.exists()) {
-          const fetchedChatData = userChatsDoc.data().chatsData || [];
-          setChatData(fetchedChatData);
+        try {
+          const chatsRef = collection(db, "chats");
+          const userChatsDoc = await getDoc(doc(chatsRef, userData.id));
+          if (userChatsDoc.exists()) {
+            const fetchedChatData = userChatsDoc.data().chatsData || [];
+            setChatData(fetchedChatData);
+          }
+        } catch (error) {
+          console.error("Error fetching chat data:", error);
+        } finally {
+          setIsLoading(false);
         }
-        setIsLoading(false);
       } else {
         setIsLoading(false);
       }
@@ -88,7 +93,7 @@ const LeftSideBar = () => {
     }
   };
 
-  // Add and remove click outside listener
+  // Add and remove click outside listner
   useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
@@ -112,7 +117,7 @@ const LeftSideBar = () => {
         ...doc.data(),
       }));
 
-      // Filter users based on search term and excluded users
+      // Filter users based on search term and exluded users
       const filteredResults = allUsers
         .filter((user) => !excludedUsers.includes(user.id))
         .filter((user) =>
@@ -151,7 +156,7 @@ const LeftSideBar = () => {
     }
   };
 
-  // Add new chat to Firestore
+  // Add new chat  Firestore
   const addChat = async (user) => {
     if (!userData) return;
     const messagesRef = collection(db, "messages");
@@ -201,18 +206,44 @@ const LeftSideBar = () => {
       setMessagesId(newMessageRef.id);
       setChatVisible(true);
 
-      // Add user to excluded users to prevent duplicate chats
+      // Add ussr to excluded users to prevent duplicate chats
       setExcludedUsers((prevExcludedUsers) => [...prevExcludedUsers, user.id]);
     } catch (error) {
       console.error("Error adding chat:", error);
     }
   };
 
-  // Handle existing chat selection
-  const handleChatClick = (item) => {
-    setChatUser(item);
-    setMessagesId(item.messageId);
-    setChatVisible(true);
+  // Handlle existing chat selection
+  const handleChatClick = async (item) => {
+    try {
+      setChatUser(item);
+      setMessagesId(item.messageId);
+      setChatVisible(true);
+      console.log("Success: Chat user set and chat made visible");
+
+      const messagesRef = doc(db, "messages", item.messageId);
+      const messagesSnap = await getDoc(messagesRef);
+
+      if (messagesSnap.exists()) {
+        const fetchedMessages = messagesSnap.data().messages || [];
+        console.log("Success: Messages fetched from Firestore");
+
+        if (setChatData) {
+          setChatData((prevChatData) =>
+            prevChatData.map((chat) =>
+              chat.messageId === item.messageId
+                ? { ...chat, messages: fetchedMessages }
+                : chat
+            )
+          );
+          console.log("Success: Chat data updated with fetched messages");
+        }
+      } else {
+        console.log("Success: No messages found for this chat");
+      }
+    } catch (error) {
+      console.error("Error loading chat:", error);
+    }
   };
 
   return (
@@ -275,11 +306,11 @@ const LeftSideBar = () => {
                 onClick={() => handleChatClick(item)}
               >
                 <img
-                  src={item.userData.avatar || assets.profile_img}
-                  alt={`${item.userData.name}'s avatar`}
+                  src={item.userData?.avatar || assets.profile_img}
+                  alt={`${item.userData?.name}'s avatar`}
                 />
                 <div>
-                  <p>{item.userData.name}</p>
+                  <p>{item.userData?.name}</p>
                   <span>{item.lastMessage || "No messages yet"}</span>
                 </div>
               </div>
