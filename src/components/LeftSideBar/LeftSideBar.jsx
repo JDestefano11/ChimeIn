@@ -24,8 +24,7 @@ import debounce from "lodash.debounce";
 
 const LeftSideBar = () => {
   const navigate = useNavigate();
-
-  // Destructure needed state and functions from the AppContext
+  // Context values for managing chat state
   const {
     chatData,
     userData,
@@ -35,17 +34,17 @@ const LeftSideBar = () => {
     setChatData,
   } = useContext(AppContext);
 
-  // Component state management
-  const [isSubMenuOpen, setIsSubMenuOpen] = useState(false); // Tracks the state of the submenu
-  const [searchTerm, setSearchTerm] = useState(""); // Manages the search term input
-  const [searchResults, setSearchResults] = useState([]); // Stores the search results
-  const [selectedUser, setSelectedUser] = useState(null); // Tracks the currently selected user
-  const [excludedUsers, setExcludedUsers] = useState([]); // Stores the list of excluded users
-  const [isLoading, setIsLoading] = useState(true); // Tracks the loading state for chat data
-  const menuRef = useRef(null); // Reference for the submenu
-  const db = getFirestore(); // Firebase Firestore instance
+  // Local state management
+  const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [excludedUsers, setExcludedUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const menuRef = useRef(null);
+  const db = getFirestore();
 
-  // Fetch chat data if it's not already loaded
+  // Fetch chat data on component mount or when userData changes
   useEffect(() => {
     const fetchChatData = async () => {
       if (userData && (!chatData || chatData.length === 0)) {
@@ -54,7 +53,7 @@ const LeftSideBar = () => {
         const userChatsDoc = await getDoc(doc(chatsRef, userData.id));
         if (userChatsDoc.exists()) {
           const fetchedChatData = userChatsDoc.data().chatsData || [];
-          setChatData(fetchedChatData); // Update the chat data state
+          setChatData(fetchedChatData);
         }
         setIsLoading(false);
       } else {
@@ -65,31 +64,31 @@ const LeftSideBar = () => {
     fetchChatData();
   }, [userData, chatData, setChatData, db]);
 
-  // Load excluded users from localStorage on component mount
+  // Load excluded users from local storage
   useEffect(() => {
     const storedExcludedUsers =
       JSON.parse(localStorage.getItem("excludedUsers")) || [];
     setExcludedUsers(storedExcludedUsers);
   }, []);
 
-  // Save excluded users to localStorage whenever it changes
+  // Save excluded users to local storage when it changes
   useEffect(() => {
     localStorage.setItem("excludedUsers", JSON.stringify(excludedUsers));
   }, [excludedUsers]);
 
-  // Toggle the submenu open/closed
+  // Toggle submenu visibility
   const toggleSubMenu = () => {
     setIsSubMenuOpen(!isSubMenuOpen);
   };
 
-  // Close the submenu if a click occurs outside of it
+  // Close submenu when clicking outside
   const handleClickOutside = (event) => {
     if (menuRef.current && !menuRef.current.contains(event.target)) {
       setIsSubMenuOpen(false);
     }
   };
 
-  // Attach event listener for clicks outside the submenu
+  // Add and remove click outside listener
   useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
@@ -97,7 +96,7 @@ const LeftSideBar = () => {
     };
   }, []);
 
-  // Handle search functionality
+  // Search users function
   const handleSearch = async () => {
     if (searchTerm.trim() === "") {
       setSearchResults([]);
@@ -113,31 +112,31 @@ const LeftSideBar = () => {
         ...doc.data(),
       }));
 
-      // Filter users based on search term and exclusion list
+      // Filter users based on search term and excluded users
       const filteredResults = allUsers
         .filter((user) => !excludedUsers.includes(user.id))
         .filter((user) =>
           user.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
-      setSearchResults(filteredResults); // Update the search results state
+      setSearchResults(filteredResults);
     } catch (error) {
       console.error("Error searching for users:", error);
     }
   };
 
-  // Debounce the search input to reduce the number of search calls
+  // Debounce search function to improve performance
   const debouncedHandleSearch = useCallback(debounce(handleSearch, 300), [
     searchTerm,
     excludedUsers,
   ]);
 
-  // Trigger the search function whenever the search term or excluded users change
+  // Trigger search when search term or excluded users change
   useEffect(() => {
     debouncedHandleSearch();
   }, [searchTerm, excludedUsers, debouncedHandleSearch]);
 
-  // Handle user click event to initiate a chat
+  // Handle user selection from search results
   const handleUserClick = async (user) => {
     setSelectedUser(user);
 
@@ -145,20 +144,21 @@ const LeftSideBar = () => {
       if (!user) {
         throw new Error("No user selected");
       }
-      await addChat(user); // Add the chat with the selected user
+      await addChat(user);
       console.log("Success: Chat with user initiated");
     } catch (error) {
       console.error("Error adding chat:", error);
     }
   };
 
-  // Add a new chat with the selected user
+  // Add new chat to Firestore
   const addChat = async (user) => {
     if (!userData) return;
     const messagesRef = collection(db, "messages");
     const chatsRef = collection(db, "chats");
 
     try {
+      // Create new message document
       const newMessageRef = doc(messagesRef);
       await setDoc(newMessageRef, {
         createdAt: serverTimestamp(),
@@ -186,11 +186,10 @@ const LeftSideBar = () => {
         }),
       });
 
-      // Get user data for the selected user
+      // Fetch user data and update chat state
       const uSnap = await getDoc(doc(db, "users", user.id));
       const uData = uSnap.data();
 
-      // Set the chat user and update relevant states
       setChatUser({
         messageId: newMessageRef.id,
         lastMessage: "",
@@ -202,14 +201,14 @@ const LeftSideBar = () => {
       setMessagesId(newMessageRef.id);
       setChatVisible(true);
 
-      // Exclude the user from future search results
+      // Add user to excluded users to prevent duplicate chats
       setExcludedUsers((prevExcludedUsers) => [...prevExcludedUsers, user.id]);
     } catch (error) {
       console.error("Error adding chat:", error);
     }
   };
 
-  // Handle chat click event to open an existing chat
+  // Handle existing chat selection
   const handleChatClick = (item) => {
     setChatUser(item);
     setMessagesId(item.messageId);
@@ -286,11 +285,9 @@ const LeftSideBar = () => {
               </div>
             )
           )
-        ) : chatData.length === 0 ? (
-          <p>No chats available.</p>
-        ) : (
-          <p>No results found.</p>
-        )}
+        ) : chatData && !isLoading && searchResults.length === 0 ? (
+          <p>No chats available</p>
+        ) : null}
       </div>
     </div>
   );
