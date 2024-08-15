@@ -5,6 +5,8 @@ import { FiSend } from "react-icons/fi";
 import { AppContext } from "../../context/AppContext";
 import { onSnapshot, doc } from "firebase/firestore";
 import { db } from "../../config/firebase";
+import { toast } from "react-toastify";
+import { updateDoc, arrayUnion, getDoc } from "firebase/firestore";
 
 const ChatBox = () => {
   const { userData, messagesId, chatUser, messages, setMessages } =
@@ -12,6 +14,54 @@ const ChatBox = () => {
   const [input, setInput] = useState("");
   const messageEndRef = useRef(null);
   const [enlargedImage, setEnlargedImage] = useState(null);
+
+  const sendMessage = async () => {
+    try {
+      if (input && messagesId) {
+        await updateDoc(doc(db, "messages", messagesId), {
+          messages: arrayUnion({
+            sId: userData.id,
+            text: input,
+            createdAt: new Date(),
+          }),
+        });
+
+        const userIDs = [chatUser.rId, userData.id];
+
+        for (const id of userIDs) {
+          const userChatsRef = doc(db, "chats", id);
+          const userChatsSnapshot = await getDoc(userChatsRef);
+
+          if (userChatsSnapshot.exists()) {
+            const userChatData = userChatsSnapshot.data();
+            const chatIndex = userChatData.chatsData.findIndex(
+              (c) => c.messageId === messagesId
+            );
+
+            if (chatIndex !== -1) {
+              userChatData.chatsData[chatIndex].lastMessage = input.slice(
+                0,
+                30
+              );
+              userChatData.chatsData[chatIndex].updatedAt = Date.now();
+
+              if (userChatData.chatsData[chatIndex].rId === userData.id) {
+                userChatData.chatsData[chatIndex].messageSeen = false;
+              }
+
+              await updateDoc(userChatsRef, {
+                chatsData: userChatData.chatsData,
+              });
+            }
+          }
+        }
+
+        setInput("");
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
 
   useEffect(() => {
     if (messagesId) {
@@ -89,12 +139,13 @@ const ChatBox = () => {
 
       <div className="chat-input">
         <input
+          onChange={(e) => setInput(e.target.value)}
           type="text"
           placeholder="Send a message"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+          onKeyPress={(e) => e.key === "Enter" && sendMessage()}
         />
+
         <input
           type="file"
           id="image"
@@ -125,7 +176,7 @@ const ChatBox = () => {
           />
         </label>
         <FiSend
-          onClick={handleSendMessage}
+          onClick={sendMessage}
           style={{
             color: "#4c4c9d",
             fontSize: "24px",
