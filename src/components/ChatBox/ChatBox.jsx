@@ -3,6 +3,8 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import assets from "../../../public/assets/assets";
 import { FiSend } from "react-icons/fi";
 import { AppContext } from "../../context/AppContext";
+import { onSnapshot, doc } from "firebase/firestore";
+import { db } from "../../config/firebase";
 
 const ChatBox = () => {
   const { userData, messagesId, chatUser, messages, setMessages } =
@@ -10,6 +12,19 @@ const ChatBox = () => {
   const [input, setInput] = useState("");
   const messageEndRef = useRef(null);
   const [enlargedImage, setEnlargedImage] = useState(null);
+
+  useEffect(() => {
+    if (messagesId) {
+      const unSub = onSnapshot(doc(db, "messages", messagesId), (res) => {
+        setMessages(res.data().messages.reverse());
+        console.log(res.data().messages.reverse());
+      });
+
+      return () => {
+        unSub();
+      };
+    }
+  }, [messagesId]);
 
   const scrollToBottom = () => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
