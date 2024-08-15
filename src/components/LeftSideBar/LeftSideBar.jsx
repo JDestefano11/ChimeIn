@@ -44,31 +44,40 @@ const LeftSideBar = () => {
   const menuRef = useRef(null);
   const db = getFirestore();
 
-  // Fetch chat data on component mountn or when usrData changes
   useEffect(() => {
     const fetchChatData = async () => {
       if (userData && (!chatData || chatData.length === 0)) {
-        setIsLoading(true);
-        try {
-          const chatsRef = collection(db, "chats");
-          const userChatsDoc = await getDoc(doc(chatsRef, userData.id));
-          if (userChatsDoc.exists()) {
-            const fetchedChatData = userChatsDoc.data().chatsData || [];
-            setChatData(fetchedChatData);
-          }
-        } catch (error) {
-          console.error("Error fetching chat data:", error);
-        } finally {
-          setIsLoading(false);
+        setIsLoading(true); // Set loading state to true while fetching data
+        const chatsRef = collection(db, "chats");
+        const userChatsDoc = await getDoc(doc(chatsRef, userData.id));
+        if (userChatsDoc.exists()) {
+          const fetchedChatData = userChatsDoc.data().chatsData || [];
+
+          // Fetch user data for each chat
+          const updatedChatData = await Promise.all(
+            fetchedChatData.map(async (chat) => {
+              const userSnap = await getDoc(doc(db, "users", chat.rId));
+              const user = userSnap.exists() ? userSnap.data() : {};
+              return {
+                ...chat,
+                userData: {
+                  name: user.name,
+                  avatar: user.avatar, // Assuming 'avatar' is the field name in Firestore
+                },
+              };
+            })
+          );
+
+          setChatData(updatedChatData);
         }
+        setIsLoading(false); // Set loading state to false after data is fetched
       } else {
-        setIsLoading(false);
+        setIsLoading(false); // Set loading state to false if data is already available
       }
     };
 
     fetchChatData();
   }, [userData, chatData, setChatData, db]);
-
   // Load excluded users from local storage
   useEffect(() => {
     const storedExcludedUsers =
@@ -93,7 +102,7 @@ const LeftSideBar = () => {
     }
   };
 
-  // Add and remove click outside listner
+  // Add and remove click outside listener
   useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
@@ -117,7 +126,7 @@ const LeftSideBar = () => {
         ...doc.data(),
       }));
 
-      // Filter users based on search term and exluded users
+      // Filter users based on search term and excluded users
       const filteredResults = allUsers
         .filter((user) => !excludedUsers.includes(user.id))
         .filter((user) =>
@@ -156,7 +165,7 @@ const LeftSideBar = () => {
     }
   };
 
-  // Add new chat  Firestore
+  // Add new chat to Firestore
   const addChat = async (user) => {
     if (!userData) return;
     const messagesRef = collection(db, "messages");
@@ -206,40 +215,37 @@ const LeftSideBar = () => {
       setMessagesId(newMessageRef.id);
       setChatVisible(true);
 
-      // Add ussr to excluded users to prevent duplicate chats
+      // Add user to excluded users to prevent duplicate chats
       setExcludedUsers((prevExcludedUsers) => [...prevExcludedUsers, user.id]);
     } catch (error) {
       console.error("Error adding chat:", error);
     }
   };
 
-  // Handlle existing chat selection
+  // Handle existing chat selection
   const handleChatClick = async (item) => {
     try {
-      setChatUser(item);
-      setMessagesId(item.messageId);
-      setChatVisible(true);
-      console.log("Success: Chat user set and chat made visible");
+      setChatUser(item); // Set the currently selected chat user
+      setMessagesId(item.messageId); // Set the ID for the chat messages
+      setChatVisible(true); // Make the chat window visible
 
+      // Fetch chat messages from Firestore
       const messagesRef = doc(db, "messages", item.messageId);
       const messagesSnap = await getDoc(messagesRef);
 
       if (messagesSnap.exists()) {
         const fetchedMessages = messagesSnap.data().messages || [];
-        console.log("Success: Messages fetched from Firestore");
 
-        if (setChatData) {
-          setChatData((prevChatData) =>
-            prevChatData.map((chat) =>
-              chat.messageId === item.messageId
-                ? { ...chat, messages: fetchedMessages }
-                : chat
-            )
-          );
-          console.log("Success: Chat data updated with fetched messages");
-        }
+        // Update the chat data with the fetched messages
+        setChatData((prevChatData) =>
+          prevChatData.map((chat) =>
+            chat.messageId === item.messageId
+              ? { ...chat, messages: fetchedMessages }
+              : chat
+          )
+        );
       } else {
-        console.log("Success: No messages found for this chat");
+        console.log("No such document!");
       }
     } catch (error) {
       console.error("Error loading chat:", error);
@@ -278,26 +284,10 @@ const LeftSideBar = () => {
         </div>
       </div>
       <div className="ls-list">
-        {isLoading ? (
+        {isLoading ? ( // Show loading state until chats are fetched
           <p>Loading chats...</p>
-        ) : searchResults.length > 0 ? (
-          searchResults.map((user) => (
-            <div
-              className="friends"
-              key={user.id}
-              onClick={() => handleUserClick(user)}
-            >
-              <img
-                src={user.avatar || assets.profile_img}
-                alt={`${user.name}'s profile`}
-              />
-              <div>
-                <p>{user.name}</p>
-                <span>{user.email || "No email provided"}</span>
-              </div>
-            </div>
-          ))
         ) : chatData && chatData.length > 0 ? (
+          // Display chat items after loading
           [...new Map(chatData.map((item) => [item.rId, item])).values()].map(
             (item, index) => (
               <div
@@ -316,9 +306,9 @@ const LeftSideBar = () => {
               </div>
             )
           )
-        ) : chatData && !isLoading && searchResults.length === 0 ? (
-          <p>No chats available</p>
-        ) : null}
+        ) : (
+          <p>No messages available</p> // Show this if there are no chats available
+        )}
       </div>
     </div>
   );
