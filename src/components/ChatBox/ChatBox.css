@@ -37,6 +37,7 @@
   filter: invert(0.5) sepia(1) saturate(5) hue-rotate(200deg);
   cursor: pointer;
   transition: transform 0.3s ease;
+  margin-left: auto;
 }
 
 .chat-user .help:hover {
