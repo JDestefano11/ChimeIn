@@ -1,82 +1,92 @@
 import "./ChatBox.css";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import assets from "../../../public/assets/assets";
 import { FiSend } from "react-icons/fi";
+import { AppContext } from "../../context/AppContext";
 
 const ChatBox = () => {
-  // Create a mutable reference using the useRef hook
-  // This reference will be used to store a reference to a DOM element
-  // within the chat message container
+  const { userData, messagesId, chatUser, messages, setMessages } =
+    useContext(AppContext);
+  const [input, setInput] = useState("");
   const messageEndRef = useRef(null);
-
-  // State variable to keep track of the clicked image and its enlarged state
   const [enlargedImage, setEnlargedImage] = useState(null);
 
-  // Function to scroll to the bottom of the chat message container
   const scrollToBottom = () => {
-    // Check if the messageEndRef.current exists (to avoid errors)
-    // If it exists, call the scrollIntoView method with the smooth behavior option
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // useEffect hook to call the scrollToBottom function when the component mounts
   useEffect(() => {
     scrollToBottom();
-    // The empty array [] as the second argument ensures that the effect is only run once,
-    // during the initial render of the component
-  }, []);
+  }, [messages]);
 
-  return (
+  const handleSendMessage = () => {
+    // Implement send message functionality here
+  };
+
+  const handleImageUpload = (event) => {
+    // Implement image upload functionality here
+  };
+
+  return chatUser ? (
     <div className="chat-box">
       <div className="chat-user">
-        <img src={assets.profile_img} alt="Profile" />
+        <img
+          src={chatUser.userData?.avatar || assets.profile_img}
+          alt="Profile"
+        />
         <div>
           <p>
-            John Doe <img src={assets.green_dot} alt="Online" className="dot" />
+            {chatUser.userData?.name}{" "}
+            <img src={assets.green_dot} alt="Online" className="dot" />
           </p>
         </div>
         <img src={assets.help_icon} alt="Help" className="help" />
       </div>
 
       <div className="chat-message">
-        <div className="s-message">
-          {/* Message image with onClick event to update the enlargedImage state */}
-          <img
-            className="msg-img"
-            src={assets.pic1}
-            alt=""
-            onClick={() => setEnlargedImage(assets.pic1)}
-          />
-          <p className="message">
-            Lorem ipsum dolor sit amet, consectetur adipisicing elit. At,
-            accusamus dolor eveniet similique commodi possimus quod modi
-            quibusdam sed cum natus consequuntur, ad quasi necessitatibus optio
-            autem, amet voluptates provident.
-          </p>
-          <div className="message-info">
-            <img src={assets.profile_img} alt="Profile" />
-            <p>2:30 PM</p>
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={
+              message.senderId === userData.id ? "s-message" : "r-message"
+            }
+          >
+            {message.image && (
+              <img
+                className="msg-img"
+                src={message.image}
+                alt=""
+                onClick={() => setEnlargedImage(message.image)}
+              />
+            )}
+            <p className="message">{message.text}</p>
+            <div className="message-info">
+              <img
+                src={chatUser.userData?.avatar || assets.profile_img}
+                alt="Profile"
+              />
+              <p>{message.timestamp}</p>
+            </div>
           </div>
-        </div>
-        <div className="r-message">
-          <p className="message">
-            Lorem ipsum dolor sit amet, consectetur adipisicing elit. At,
-            accusamus dolor eveniet similique commodi possimus quod modi
-            quibusdam sed cum natus consequuntur, ad quasi necessitatibus optio
-            autem, amet voluptates provident.
-          </p>
-          <div className="message-info">
-            <img src={assets.profile_img} alt="Profile" />
-            <p>2:30 PM</p>
-          </div>
-        </div>
-        {/* Attach the messageEndRef to a div element */}
+        ))}
         <div ref={messageEndRef} />
       </div>
 
       <div className="chat-input">
-        <input type="text" placeholder="Send a message" />
-        <input type="file" id="image" accept="image/png, image/jpeg" hidden />
+        <input
+          type="text"
+          placeholder="Send a message"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+        />
+        <input
+          type="file"
+          id="image"
+          accept="image/png, image/jpeg"
+          hidden
+          onChange={handleImageUpload}
+        />
         <label htmlFor="image">
           <img
             src={assets.gallery_icon}
@@ -100,6 +110,7 @@ const ChatBox = () => {
           />
         </label>
         <FiSend
+          onClick={handleSendMessage}
           style={{
             color: "#4c4c9d",
             fontSize: "24px",
@@ -119,25 +130,23 @@ const ChatBox = () => {
         />
       </div>
 
-      {/* Render the enlarged image overlay and container if enlargedImage is not null */}
       {enlargedImage && (
-        // If enlargedImage is not null, render the enlarged image overlay
         <div className="enlarged-image-overlay">
           <div className="enlarged-image-container">
-            {/* Display the enlarged image */}
             <img
-              src={enlargedImage} // Use the image source from the enlargedImage state
+              src={enlargedImage}
               alt="Enlarged Image"
               className="enlarged-image"
             />
-
-            {/* Button to close the enlarged image overlay */}
-            <button onClick={() => setEnlargedImage(null)}>
-              {/* When clicked, set the enlargedImage state to null */}X
-            </button>
+            <button onClick={() => setEnlargedImage(null)}>X</button>
           </div>
         </div>
       )}
+    </div>
+  ) : (
+    <div className="chat-welcome">
+      <img src={assets.logo} alt="Welcome" />
+      <p>Chat Anytime, Anywhere</p>
     </div>
   );
 };

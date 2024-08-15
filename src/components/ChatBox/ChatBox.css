@@ -256,3 +256,53 @@
 .enlarged-image-container button:focus {
   outline: none;
 }
+.chat-welcome {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  background: linear-gradient(135deg, #f5f7fb 0%, #e0e6f5 100%);
+  padding: 3rem;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.chat-welcome img {
+  max-width: 350px;
+  margin-bottom: 2.5rem;
+  animation: pulse 3s ease-in-out infinite;
+  filter: drop-shadow(0 5px 15px rgba(76, 76, 157, 0.3));
+}
+
+.chat-welcome p {
+  font-size: 2rem;
+  color: #4c4c9d;
+  font-weight: bold;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  background: linear-gradient(45deg, #4c4c9d, #7676c7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}

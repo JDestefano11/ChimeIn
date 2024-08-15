@@ -32,6 +32,7 @@ const LeftSideBar = () => {
     setMessagesId,
     setChatVisible,
     setChatData,
+    messages,
   } = useContext(AppContext);
 
   // Local state management
@@ -250,6 +251,11 @@ const LeftSideBar = () => {
     } catch (error) {
       console.error("Error loading chat:", error);
     }
+  };
+
+  const setChat = async (item) => {
+    setMessagesId(item.messageId);
+    setChatUser(item);
   };
 
   return (
