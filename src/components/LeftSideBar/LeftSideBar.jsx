@@ -99,7 +99,6 @@ const LeftSideBar = () => {
         ...doc.data(),
       }));
 
-      // Filter users based on search term and excluded users
       const filteredResults = allUsers
         .filter((user) => user.id !== userData.id)
         .filter((user) =>
@@ -126,6 +125,13 @@ const LeftSideBar = () => {
     setChatUser(item);
     setMessagesId(item.messageId);
     setChatVisible(true);
+  };
+
+  // Format timestamp to display time in HH:MM format
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return "";
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   return (
@@ -174,9 +180,16 @@ const LeftSideBar = () => {
                 src={item.userData?.avatar || assets.profile_img}
                 alt={`${item.userData?.name}'s avatar`}
               />
-              <div>
-                <p>{item.userData?.name}</p>
-                <span>{item.lastMessage || "No messages yet"}</span>
+              <div className="friend-info">
+                <div className="friend-name-time">
+                  <p>{item.userData?.name}</p>
+                  <span className="message-time">
+                    {formatTimestamp(item.updatedAt)}
+                  </span>
+                </div>
+                <span className="last-message">
+                  {item.lastMessage || "No messages yet"}
+                </span>
               </div>
             </div>
           ))
