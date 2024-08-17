@@ -4,30 +4,30 @@ import assets from "../../../public/assets/assets";
 import { useNavigate } from "react-router";
 import {
   getFirestore,
-  collection,
   doc,
   setDoc,
   updateDoc,
-  serverTimestamp,
-  arrayUnion,
-  getDocs,
   getDoc,
   onSnapshot,
+  collection,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import { AppContext } from "../../context/AppContext";
+import { toast } from "react-toastify";
 
 const LeftSideBar = () => {
   const navigate = useNavigate();
-  // Context values for managing chat state
   const { userData, setChatUser, setMessagesId, setChatVisible, setChatData } =
     useContext(AppContext);
 
-  // Local state management
   const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState("");
+  const [filteredChats, setFilteredChats] = useState([]);
   const [chatItems, setChatItems] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const menuRef = useRef(null);
   const db = getFirestore();
 
@@ -55,6 +55,8 @@ const LeftSideBar = () => {
           );
           setChatItems(uniqueChatItems);
           setChatData(uniqueChatItems);
+        } else {
+          setDoc(chatsRef, { chatsData: [] });
         }
         setIsLoading(false);
       });
@@ -63,19 +65,78 @@ const LeftSideBar = () => {
     }
   }, [userData, db, setChatData]);
 
-  // Toggle submenu visibility
+  useEffect(() => {
+    const fetchAllUsers = async () => {
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("id", "!=", userData?.id));
+      const querySnapshot = await getDocs(q);
+
+      const users = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setAllUsers(users);
+    };
+
+    fetchAllUsers();
+  }, [db, userData?.id]);
+
+  useEffect(() => {
+    if (searchInput.trim() === "") {
+      setFilteredChats(chatItems);
+    } else {
+      const filtered = allUsers.filter(
+        (user) =>
+          user.name?.toLowerCase().includes(searchInput.toLowerCase()) ||
+          chatItems.some(
+            (chat) =>
+              chat.userData?.id === user.id &&
+              chat.lastMessage
+                ?.toLowerCase()
+                .includes(searchInput.toLowerCase())
+          )
+      );
+      setFilteredChats(filtered);
+    }
+  }, [searchInput, chatItems, allUsers]);
+
+  const handleChatClick = (chat) => {
+    const selectedUser = allUsers.find(
+      (user) => user.id === chat.id || user.id === chat.rId
+    );
+    if (selectedUser) {
+      const chatUserData = {
+        id: selectedUser.id,
+        name: selectedUser.name,
+        messageId: chat.messageId || `${userData.id}_${selectedUser.id}`,
+      };
+      setChatUser(chatUserData);
+      setMessagesId(chatUserData.messageId);
+      setChatVisible(true);
+
+      // Update chat status if necessary
+      const chatIndex = chatItems.findIndex((c) => c.rId === selectedUser.id);
+      if (chatIndex !== -1 && !chatItems[chatIndex].messageSeen) {
+        chatItems[chatIndex].messageSeen = true;
+        const userChatsRef = doc(db, "chats", userData.id);
+
+        updateDoc(userChatsRef, {
+          chatsData: chatItems,
+        }).catch((error) => toast.error("Failed to update chat status."));
+      }
+    }
+  };
+
   const toggleSubMenu = () => {
     setIsSubMenuOpen(!isSubMenuOpen);
   };
 
-  // Close submenu when clicking outside
   const handleClickOutside = (event) => {
     if (menuRef.current && !menuRef.current.contains(event.target)) {
       setIsSubMenuOpen(false);
     }
   };
 
-  // Add and remove click outside listener
   useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
@@ -83,53 +144,8 @@ const LeftSideBar = () => {
     };
   }, []);
 
-  // Search users function
-  const handleSearch = async () => {
-    if (searchTerm.trim() === "") {
-      setSearchResults([]);
-      return;
-    }
-
-    const usersRef = collection(db, "users");
-
-    try {
-      const querySnapshot = await getDocs(usersRef);
-      const allUsers = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      // Filter users based on search term and excluded users
-      const filteredResults = allUsers
-        .filter((user) => user.id !== userData.id)
-        .filter((user) =>
-          user.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-
-      setSearchResults(filteredResults);
-    } catch (error) {
-      console.error("Error searching for users:", error);
-    }
-  };
-
-  // Trigger search when search term changes
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      handleSearch();
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm]);
-
-  // Handle existing chat selection
-  const handleChatClick = (item) => {
-    setChatUser(item);
-    setMessagesId(item.messageId);
-    setChatVisible(true);
-  };
-
   return (
-    <div className="ls">
+    <div className="left-sidebar">
       <div className="ls-top">
         <div className="ls-nav">
           <img src={assets.logo} className="logo" alt="Logo" />
@@ -153,35 +169,46 @@ const LeftSideBar = () => {
           <img src={assets.search_icon} alt="Search" />
           <input
             type="text"
-            placeholder="Search users.."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search Chats"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
       </div>
       <div className="ls-list">
-        {isLoading ? ( // Show loading state until chats are fetched
+        {isLoading ? (
           <p>Loading chats...</p>
-        ) : chatItems.length > 0 ? (
-          // Display chat items after loading
-          chatItems.map((item, index) => (
+        ) : filteredChats.length > 0 ? (
+          filteredChats.map((item, index) => (
             <div
-              className="friends"
+              className={`friends ${!item.messageSeen ? "unread" : ""}`}
               key={index}
               onClick={() => handleChatClick(item)}
             >
               <img
-                src={item.userData?.avatar || assets.profile_img}
-                alt={`${item.userData?.name}'s avatar`}
+                src={item.avatar || item.userData?.avatar || assets.profile_img}
+                alt={`${item.name || item.userData?.name}'s avatar`}
               />
               <div>
-                <p>{item.userData?.name}</p>
-                <span>{item.lastMessage || "No messages yet"}</span>
+                <p>{item.name || item.userData?.name}</p>
+                {item.lastMessage && (
+                  <>
+                    <span>{item.lastMessage}</span>
+                    <small>
+                      {new Date(item.updatedAt).toLocaleTimeString()}
+                    </small>
+                  </>
+                )}
               </div>
+              {!item.messageSeen && (
+                <div className="unread-indicator">
+                  <span>New</span>
+                </div>
+              )}
             </div>
           ))
         ) : (
-          <p>No messages available</p> // Show this if there are no chats available
+          <p>No messages available</p>
         )}
       </div>
     </div>
