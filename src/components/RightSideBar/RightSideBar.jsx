@@ -1,84 +1,56 @@
-import React, { useState } from "react";
-import "./RightSideBar.css";
+import React, { useContext, useEffect, useState } from "react";
+import "./RightSidebar.css";
 import assets from "../../../public/assets/assets";
 import { logout } from "../../config/firebase";
+import { AppContext } from "../../context/AppContext";
 
-const RightSideBar = () => {
-  const [showModal, setShowModal] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
+const RightSidebar = () => {
+  const { chatUser, messages } = useContext(AppContext);
+  const [msgImages, setMsgImages] = useState([]);
 
-  const handleImageClick = (image) => {
-    setSelectedImage(image);
-    setShowModal(true);
-  };
+  useEffect(() => {
+    let tempVar = [];
+    messages.map((msg) => {
+      if (msg.image) {
+        tempVar.push(msg.image);
+      }
+    });
+    setMsgImages(tempVar);
+  }, [messages]);
 
-  const handleModalClose = () => {
-    setShowModal(false);
-    setSelectedImage(null);
-  };
-
-  return (
+  return chatUser ? (
     <div className="rs">
       <div className="rs-profile">
-        <div className="rs-profile-header">
-          <div className="profile-image-container">
-            <img src={assets.profile_img} alt="Profile" />
-          </div>
-          <div className="profile-info">
-            <h3>
-              John Doe{" "}
-              <span className="online-status">
-                <img src={assets.green_dot} alt="Online Status" />
-              </span>
-            </h3>
-          </div>
-        </div>
-        <p>Hey, I am John Doe using Chat App</p>
+        <img src={chatUser.userData.avatar} alt="" />
+        <h3>
+          {Date.now() - chatUser.userData.lastSeen <= 70000 ? (
+            <img className="dot" src={assets.green_dot} alt="" />
+          ) : null}
+          {chatUser.userData.name}
+        </h3>
+        <p>{chatUser.userData.bio}</p>
       </div>
       <hr />
       <div className="rs-media">
-        <h4>Media</h4>
-        <div className="rs-media-gallery">
-          <img
-            src={assets.pic1}
-            alt="Media"
-            onClick={() => handleImageClick(assets.pic1)}
-          />
-          <img
-            src={assets.pic2}
-            alt="Media"
-            onClick={() => handleImageClick(assets.pic2)}
-          />
-          <img
-            src={assets.pic3}
-            alt="Media"
-            onClick={() => handleImageClick(assets.pic3)}
-          />
-          <img
-            src={assets.pic4}
-            alt="Media"
-            onClick={() => handleImageClick(assets.pic4)}
-          />
+        <p>Media</p>
+        <div>
+          {msgImages.map((url, index) => (
+            <img
+              onClick={() => window.open(url)}
+              key={index}
+              src={url}
+              alt=""
+            />
+          ))}
         </div>
       </div>
-      <button onClick={() => logout()} className="rs-logout">
-        Logout
-      </button>
-
-      {/* Modal for displaying larger image */}
-      <div
-        className={`rs-media-modal ${showModal ? "show" : ""}`}
-        onClick={handleModalClose}
-      >
-        <div className="modal-image-container">
-          <img src={selectedImage} alt="Enlarged Media" />
-          <span className="close-btn" onClick={handleModalClose}>
-            &times;
-          </span>
-        </div>
-      </div>
+      <button onClick={() => logout()}>Logout</button>
+    </div>
+  ) : (
+    <div className="rs">
+      <button onClick={() => logout()}>Logout</button>
     </div>
   );
 };
 
-export default RightSideBar;
+export default RightSidebar;

@@ -1,231 +1,242 @@
-import "./ChatBox.css";
 import React, { useContext, useEffect, useRef, useState } from "react";
+import "./ChatBox.css";
 import assets from "../../../public/assets/assets";
-import { FiSend } from "react-icons/fi";
 import { AppContext } from "../../context/AppContext";
-import { onSnapshot, doc } from "firebase/firestore";
+import {
+  arrayUnion,
+  doc,
+  getDoc,
+  onSnapshot,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { toast } from "react-toastify";
-import { updateDoc, arrayUnion, getDoc } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import upload from "../../lib/upload";
 
 const ChatBox = () => {
-  const { userData, messagesId, chatUser, messages, setMessages } =
-    useContext(AppContext);
+  const {
+    userData,
+    messagesId,
+    chatUser,
+    messages,
+    setMessages,
+    chatVisible,
+    setChatVisible,
+    activeUsers,
+    updateActiveUsers,
+  } = useContext(AppContext);
   const [input, setInput] = useState("");
-  const messageEndRef = useRef(null);
-  const [enlargedImage, setEnlargedImage] = useState(null);
+  const scrollEnd = useRef();
 
-  const sendMessage = async (imageUrl = null) => {
+  const sendMessage = async () => {
     try {
-      if ((input || imageUrl) && messagesId) {
+      if (input && messagesId) {
         await updateDoc(doc(db, "messages", messagesId), {
           messages: arrayUnion({
             sId: userData.id,
             text: input,
-            image: imageUrl,
             createdAt: new Date(),
           }),
         });
 
         const userIDs = [chatUser.rId, userData.id];
 
-        for (const id of userIDs) {
+        userIDs.forEach(async (id) => {
           const userChatsRef = doc(db, "chats", id);
           const userChatsSnapshot = await getDoc(userChatsRef);
 
           if (userChatsSnapshot.exists()) {
-            const userChatData = userChatsSnapshot.data();
-            const chatIndex = userChatData.chatsData.findIndex(
+            const userChatsData = userChatsSnapshot.data();
+            const chatIndex = userChatsData.chatsData.findIndex(
               (c) => c.messageId === messagesId
             );
-
-            if (chatIndex !== -1) {
-              userChatData.chatsData[chatIndex].lastMessage = input.slice(
-                0,
-                30
-              );
-              userChatData.chatsData[chatIndex].updatedAt = Date.now();
-
-              if (userChatData.chatsData[chatIndex].rId === userData.id) {
-                userChatData.chatsData[chatIndex].messageSeen = false;
-              }
-
-              await updateDoc(userChatsRef, {
-                chatsData: userChatData.chatsData,
-              });
+            userChatsData.chatsData[chatIndex].lastMessage = input;
+            userChatsData.chatsData[chatIndex].updatedAt = Date.now();
+            if (userChatsData.chatsData[chatIndex].rId == userData.id) {
+              userChatsData.chatsData[chatIndex].messageSeen = false;
             }
+            await updateDoc(userChatsRef, {
+              chatsData: userChatsData.chatsData,
+            });
           }
-        }
-
-        setInput("");
+        });
       }
     } catch (error) {
       toast.error(error.message);
     }
+
+    setInput("");
   };
+
+  const convertTimestamp = (timestamp) => {
+    let date = timestamp.toDate();
+    const hour = date.getHours();
+    const minute = date.getMinutes();
+    if (hour > 12) {
+      date = hour - 12 + ":" + minute + " PM";
+    } else {
+      date = hour + ":" + minute + " AM";
+    }
+    return date;
+  };
+
+  const sendImage = async (e) => {
+    const fileUrl = await upload(e.target.files[0]);
+
+    if (fileUrl && messagesId) {
+      await updateDoc(doc(db, "messages", messagesId), {
+        messages: arrayUnion({
+          sId: userData.id,
+          image: fileUrl,
+          createdAt: new Date(),
+        }),
+      });
+
+      const userIDs = [chatUser.rId, userData.id];
+
+      userIDs.forEach(async (id) => {
+        const userChatsRef = doc(db, "chats", id);
+        const userChatsSnapshot = await getDoc(userChatsRef);
+
+        if (userChatsSnapshot.exists()) {
+          const userChatsData = userChatsSnapshot.data();
+          const chatIndex = userChatsData.chatsData.findIndex(
+            (c) => c.messageId === messagesId
+          );
+          userChatsData.chatsData[chatIndex].lastMessage = "Image";
+          userChatsData.chatsData[chatIndex].updatedAt = Date.now();
+          await updateDoc(userChatsRef, {
+            chatsData: userChatsData.chatsData,
+          });
+        }
+      });
+    }
+  };
+
+  useEffect(() => {
+    scrollEnd.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   useEffect(() => {
     if (messagesId) {
       const unSub = onSnapshot(doc(db, "messages", messagesId), (res) => {
-        // Ensure messages are sorted in ascending order of creation
-        setMessages(
-          res.data().messages.sort((a, b) => a.createdAt - b.createdAt)
-        );
+        setMessages(res.data().messages.reverse());
       });
-
       return () => {
         unSub();
       };
     }
   }, [messagesId]);
 
-  const scrollToBottom = () => {
-    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const handleSendMessage = () => {
-    sendMessage();
-  };
-
-  const handleImageUpload = async (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      try {
-        const storage = getStorage();
-        const imageRef = ref(storage, `images/${Date.now()}_${file.name}`);
-        await uploadBytes(imageRef, file);
-        const imageUrl = await getDownloadURL(imageRef);
-        await sendMessage(imageUrl);
-      } catch (error) {
-        toast.error(error.message);
-      }
+    if (chatUser) {
+      const interval = setInterval(() => {
+        updateActiveUsers(chatUser.userData.id, Date.now());
+      }, 60000);
+      return () => clearInterval(interval);
     }
+  }, [chatUser]);
+
+  const isUserActive = (userId) => {
+    return Date.now() - activeUsers[userId] <= 70000;
   };
 
+  const formatLastSeen = (timestamp) => {
+    const diff = Date.now() - timestamp;
+    if (diff < 60000) return "Just now";
+    if (diff < 3600000) return `${Math.floor(diff / 60000)} minutes ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
+    return `${Math.floor(diff / 86400000)} days ago`;
+  };
   return chatUser ? (
-    <div className="chat-box">
+    <div className={`chat-box ${chatVisible ? "" : "hidden"}`}>
       <div className="chat-user">
+        <img src={chatUser.userData.avatar} alt="" />
+        <p>
+          {chatUser.userData.name}{" "}
+          {isUserActive(chatUser.userData.id) ? (
+            <span className="active-status">Active now</span>
+          ) : (
+            <span className="last-seen">
+              Last seen {formatLastSeen(activeUsers[chatUser.userData.id])}
+            </span>
+          )}
+        </p>
         <img
-          src={chatUser.userData?.avatar || assets.profile_img}
-          alt="Profile"
+          onClick={() => setChatVisible(false)}
+          className="arrow"
+          src={assets.arrow_icon}
+          alt=""
         />
-        <div>
-          <p>
-            {chatUser.userData?.name}{" "}
-            <img src={assets.green_dot} alt="Online" className="dot" />
-          </p>
-        </div>
-        <img src={assets.help_icon} alt="Help" className="help" />
+        <img
+          className="help"
+          src={assets.help_icon}
+          alt=""
+          style={{ filter: "brightness(0) invert(1)", cursor: "pointer" }}
+        />
       </div>
-
-      <div className="chat-message">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={message.sId === userData.id ? "s-message" : "r-message"}
-          >
-            {message.image && (
-              <img
-                className="msg-img"
-                src={message.image}
-                alt=""
-                onClick={() => setEnlargedImage(message.image)}
-              />
-            )}
-            <p className="message">{message.text}</p>
-            <div className="message-info">
-              <img
-                src={chatUser.userData?.avatar || assets.profile_img}
-                alt="Profile"
-              />
-              <p>{new Date(message.createdAt.toDate()).toLocaleTimeString()}</p>
+      <div className="chat-msg">
+        <div ref={scrollEnd}></div>
+        {messages.map((msg, index) => {
+          return (
+            <div
+              key={index}
+              className={msg.sId === userData.id ? "s-msg" : "r-msg"}
+            >
+              {msg["image"] ? (
+                <img className="msg-img" src={msg["image"]} alt="" />
+              ) : (
+                <p className="msg">{msg["text"]}</p>
+              )}
+              <div>
+                <img
+                  src={
+                    msg.sId === userData.id
+                      ? userData.avatar
+                      : chatUser.userData.avatar
+                  }
+                  alt=""
+                />
+                <p>{convertTimestamp(msg.createdAt)}</p>
+              </div>
             </div>
-          </div>
-        ))}
-        <div ref={messageEndRef} />
+          );
+        })}
       </div>
-
       <div className="chat-input">
         <input
+          onKeyDown={(e) => (e.key === "Enter" ? sendMessage() : null)}
           onChange={(e) => setInput(e.target.value)}
+          value={input}
           type="text"
           placeholder="Send a message"
-          value={input}
-          onKeyPress={(e) => e.key === "Enter" && sendMessage()}
         />
-
         <input
+          onChange={sendImage}
           type="file"
           id="image"
           accept="image/png, image/jpeg"
           hidden
-          onChange={handleImageUpload}
         />
-        <label htmlFor="image">
+        <label htmlFor="image" className="image-upload-label">
           <img
             src={assets.gallery_icon}
-            alt="Gallery"
-            style={{
-              filter: "invert(1)",
-              height: "24px",
-              cursor: "pointer",
-              opacity: 0.8,
-              transition: "opacity 0.3s ease, transform 0.3s ease",
-              boxShadow: "0 0 4px rgba(0, 0, 0, 0.2)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = "1";
-              e.currentTarget.style.transform = "scale(1.1)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = "0.8";
-              e.currentTarget.style.transform = "scale(1)";
-            }}
+            alt=""
+            style={{ filter: "brightness(0) invert(1)" }}
           />
         </label>
-        <FiSend
-          onClick={handleSendMessage}
-          style={{
-            color: "#4c4c9d",
-            fontSize: "24px",
-            cursor: "pointer",
-            opacity: 0.8,
-            transition: "opacity 0.3s ease, transform 0.3s ease",
-            boxShadow: "0 0 4px rgba(0, 0, 0, 0.2)",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = "1";
-            e.currentTarget.style.transform = "scale(1.1)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = "0.8";
-            e.currentTarget.style.transform = "scale(1)";
-          }}
-        />
-      </div>
 
-      {enlargedImage && (
-        <div className="enlarged-image-overlay">
-          <div className="enlarged-image-container">
-            <img
-              src={enlargedImage}
-              alt="Enlarged Image"
-              className="enlarged-image"
-            />
-            <button onClick={() => setEnlargedImage(null)}>X</button>
-          </div>
-        </div>
-      )}
+        <i
+          onClick={sendMessage}
+          className="fas fa-paper-plane send-button"
+          aria-hidden="true"
+        ></i>
+      </div>
     </div>
   ) : (
-    <div className="chat-welcome">
-      <img src={assets.logo} alt="Welcome" />
-      <p>Chat Anytime, Anywhere</p>
+    <div className={`chat-welcome ${chatVisible ? "" : "hidden"}`}>
+      <img src={assets.logo_icon} alt="" />
+      <p>Chat anytime, anywhere</p>
     </div>
   );
 };
