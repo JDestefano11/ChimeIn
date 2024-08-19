@@ -13,7 +13,7 @@ import { db } from "../../config/firebase";
 import { toast } from "react-toastify";
 import upload from "../../lib/upload";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaperPlane } from "@fortawesome/free-solid-svg-icons";
+import { faPaperPlane, faSmile } from "@fortawesome/free-solid-svg-icons";
 
 const ChatBox = () => {
   const {
@@ -28,7 +28,10 @@ const ChatBox = () => {
     updateActiveUsers,
   } = useContext(AppContext);
   const [input, setInput] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const scrollEnd = useRef();
+
+  const emojis = ["😀", "😂", "😍", "🥳", "😎", "🤔", "👍", "❤️"];
 
   const sendMessage = async () => {
     try {
@@ -150,6 +153,12 @@ const ChatBox = () => {
     if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
     return `${Math.floor(diff / 86400000)} days ago`;
   };
+
+  const handleEmojiClick = (emoji) => {
+    setInput(input + emoji);
+    setShowEmojiPicker(false);
+  };
+
   return chatUser ? (
     <div className={`chat-box ${chatVisible ? "" : "hidden"}`}>
       <div className="chat-user">
@@ -227,13 +236,26 @@ const ChatBox = () => {
             style={{ filter: "brightness(0) invert(1)" }}
           />
         </label>
-
+        <FontAwesomeIcon
+          icon={faSmile}
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          className="emoji-button"
+        />
         <FontAwesomeIcon
           icon={faPaperPlane}
           onClick={sendMessage}
           className="send-button"
         />
       </div>
+      {showEmojiPicker && (
+        <div className="emoji-picker">
+          {emojis.map((emoji, index) => (
+            <span key={index} onClick={() => handleEmojiClick(emoji)}>
+              {emoji}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   ) : (
     <div className={`chat-welcome ${chatVisible ? "" : "hidden"}`}>
