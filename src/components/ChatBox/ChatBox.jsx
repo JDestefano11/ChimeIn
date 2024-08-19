@@ -12,6 +12,8 @@ import {
 import { db } from "../../config/firebase";
 import { toast } from "react-toastify";
 import upload from "../../lib/upload";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 
 const ChatBox = () => {
   const {
@@ -226,11 +228,11 @@ const ChatBox = () => {
           />
         </label>
 
-        <i
+        <FontAwesomeIcon
+          icon={faPaperPlane}
           onClick={sendMessage}
-          className="fas fa-paper-plane send-button"
-          aria-hidden="true"
-        ></i>
+          className="send-button"
+        />
       </div>
     </div>
   ) : (
