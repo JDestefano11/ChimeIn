@@ -13,11 +13,7 @@ import { db } from "../../config/firebase";
 import { toast } from "react-toastify";
 import upload from "../../lib/upload";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faPaperPlane,
-  faSmile,
-  faReply,
-} from "@fortawesome/free-solid-svg-icons";
+import { faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 
 const ChatBox = () => {
   const {
@@ -32,26 +28,17 @@ const ChatBox = () => {
     updateActiveUsers,
   } = useContext(AppContext);
   const [input, setInput] = useState("");
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [replyingTo, setReplyingTo] = useState(null);
   const scrollEnd = useRef();
-
-  const emojis = ["😀", "😂", "😍", "🥳", "😎", "🤔", "👍", "❤️"];
 
   const sendMessage = async () => {
     try {
       if (input && messagesId) {
-        const newMessage = {
-          sId: userData.id,
-          text: input,
-          createdAt: new Date(),
-          reactions: {},
-        };
-        if (replyingTo) {
-          newMessage.replyTo = replyingTo;
-        }
         await updateDoc(doc(db, "messages", messagesId), {
-          messages: arrayUnion(newMessage),
+          messages: arrayUnion({
+            sId: userData.id,
+            text: input,
+            createdAt: new Date(),
+          }),
         });
 
         const userIDs = [chatUser.rId, userData.id];
@@ -75,37 +62,12 @@ const ChatBox = () => {
             });
           }
         });
-
-        setInput("");
-        setReplyingTo(null);
       }
     } catch (error) {
       toast.error(error.message);
     }
-  };
 
-  const addReaction = async (messageIndex, emoji) => {
-    try {
-      const updatedMessages = [...messages];
-      if (!updatedMessages[messageIndex].reactions) {
-        updatedMessages[messageIndex].reactions = {};
-      }
-      if (updatedMessages[messageIndex].reactions[emoji]) {
-        delete updatedMessages[messageIndex].reactions[emoji];
-      } else {
-        updatedMessages[messageIndex].reactions[emoji] = userData.id;
-      }
-
-      await updateDoc(doc(db, "messages", messagesId), {
-        messages: updatedMessages,
-      });
-    } catch (error) {
-      toast.error(error.message);
-    }
-  };
-
-  const handleReply = (message) => {
-    setReplyingTo(message);
+    setInput("");
   };
 
   const convertTimestamp = (timestamp) => {
@@ -129,7 +91,6 @@ const ChatBox = () => {
           sId: userData.id,
           image: fileUrl,
           createdAt: new Date(),
-          reactions: {},
         }),
       });
 
@@ -189,12 +150,6 @@ const ChatBox = () => {
     if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
     return `${Math.floor(diff / 86400000)} days ago`;
   };
-
-  const handleEmojiClick = (emoji) => {
-    setInput(input + emoji);
-    setShowEmojiPicker(false);
-  };
-
   return chatUser ? (
     <div className={`chat-box ${chatVisible ? "" : "hidden"}`}>
       <div className="chat-user">
@@ -230,48 +185,10 @@ const ChatBox = () => {
               key={index}
               className={msg.sId === userData.id ? "s-msg" : "r-msg"}
             >
-              {msg.replyTo && (
-                <div className="reply-to">
-                  <p>{msg.replyTo.text}</p>
-                </div>
-              )}
               {msg["image"] ? (
                 <img className="msg-img" src={msg["image"]} alt="" />
               ) : (
-                <p className="msg">
-                  {msg["text"]}
-                  <div className="msg-actions">
-                    <FontAwesomeIcon
-                      icon={faSmile}
-                      onClick={() => setShowEmojiPicker(index)}
-                      className="reaction-button"
-                    />
-                    <FontAwesomeIcon
-                      icon={faReply}
-                      onClick={() => handleReply(msg)}
-                      className="reply-button"
-                    />
-                  </div>
-                  {showEmojiPicker === index && (
-                    <div className="emoji-reaction-picker">
-                      {emojis.map((emoji, emojiIndex) => (
-                        <span
-                          key={emojiIndex}
-                          onClick={() => addReaction(index, emoji)}
-                        >
-                          {emoji}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                    <div className="reactions">
-                      {Object.keys(msg.reactions).map((emoji) => (
-                        <span key={emoji}>{emoji}</span>
-                      ))}
-                    </div>
-                  )}
-                </p>
+                <p className="msg">{msg["text"]}</p>
               )}
               <div>
                 <img
@@ -288,12 +205,6 @@ const ChatBox = () => {
           );
         })}
       </div>
-      {replyingTo && (
-        <div className="replying-to">
-          <p>Replying to: {replyingTo.text}</p>
-          <button onClick={() => setReplyingTo(null)}>Cancel</button>
-        </div>
-      )}
       <div className="chat-input">
         <input
           onKeyDown={(e) => (e.key === "Enter" ? sendMessage() : null)}
@@ -316,26 +227,13 @@ const ChatBox = () => {
             style={{ filter: "brightness(0) invert(1)" }}
           />
         </label>
-        <FontAwesomeIcon
-          icon={faSmile}
-          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="emoji-button"
-        />
+
         <FontAwesomeIcon
           icon={faPaperPlane}
           onClick={sendMessage}
           className="send-button"
         />
       </div>
-      {showEmojiPicker && (
-        <div className="emoji-picker">
-          {emojis.map((emoji, index) => (
-            <span key={index} onClick={() => handleEmojiClick(emoji)}>
-              {emoji}
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   ) : (
     <div className={`chat-welcome ${chatVisible ? "" : "hidden"}`}>
