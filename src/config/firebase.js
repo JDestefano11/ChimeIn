@@ -71,5 +71,27 @@ const logout = async () => {
         toast.error(error.code.split("/")[1].split("-").join(" "));
     }
 };
+const resetPass = async (email) => {
+    if (!email) {
+        toast.error("Enter your email")
+        return null
+    }
+    try {
+        const userRef = collection(db, "users")
+        const q = query(userRef, where("email", "==", email))
+        const querySnap = await getDocs(q)
+        if (!querySnap.empty) {
+            await sendPasswordResetEmail(auth, email)
+            toast.success("Reset Email Sent")
+        }
+        else {
+            toast.error("Email doesn't exists")
+        }
+    } catch (error) {
+        console.error(error)
+        toast.error(error.message)
+    }
 
-export { signup, login, logout, auth, db };
+}
+
+export { auth, db, login, signup, logout, resetPass };

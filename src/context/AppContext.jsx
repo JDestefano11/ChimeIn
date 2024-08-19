@@ -13,6 +13,7 @@ const AppContextProvider = (props) => {
   const [messages, setMessages] = useState([]);
   const [chatUser, setChatUser] = useState(null);
   const [chatVisible, setChatVisible] = useState(false);
+  const [activeUsers, setActiveUsers] = useState({});
   const navigate = useNavigate();
 
   const loadUserData = async (uid) => {
@@ -21,22 +22,15 @@ const AppContextProvider = (props) => {
       const userSnap = await getDoc(userRef);
       const userData = userSnap.data();
       setUserData(userData);
-
       if (userData.avatar && userData.name) {
         navigate("/chat");
       } else {
         navigate("/profile");
       }
-
       await updateDoc(userRef, {
         lastSeen: Date.now(),
       });
-
-      if (window.chatUpdateInterval) {
-        clearInterval(window.chatUpdateInterval);
-      }
-
-      window.chatUpdateInterval = setInterval(async () => {
+      setInterval(async () => {
         if (auth.currentUser) {
           await updateDoc(userRef, {
             lastSeen: Date.now(),
@@ -59,42 +53,23 @@ const AppContextProvider = (props) => {
           const userSnap = await getDoc(userRef);
           const userData = userSnap.data();
           tempData.push({ ...item, userData });
+          setActiveUsers((prev) => ({
+            ...prev,
+            [item.rId]: userData.lastSeen,
+          }));
         }
         setChatData(tempData.sort((a, b) => b.updatedAt - a.updatedAt));
       });
 
       return () => {
         unSub();
-        if (window.chatUpdateInterval) {
-          clearInterval(window.chatUpdateInterval);
-        }
       };
     }
   }, [userData]);
 
-  useEffect(() => {
-    if (userData) {
-      const fetchChatData = async () => {
-        const chatRef = doc(db, "chats", userData.id);
-        const data = await getDoc(chatRef);
-        const chatItems = data.data().chatsData;
-        const tempData = [];
-        for (const item of chatItems) {
-          const userRef = doc(db, "users", item.rId);
-          const userSnap = await getDoc(userRef);
-          const userData = userSnap.data();
-          tempData.push({ ...item, userData });
-        }
-        setChatData(tempData.sort((a, b) => b.updatedAt - a.updatedAt));
-      };
-
-      const intervalId = setInterval(fetchChatData, 10000);
-
-      return () => {
-        clearInterval(intervalId);
-      };
-    }
-  }, [userData]);
+  const updateActiveUsers = (userId, lastSeen) => {
+    setActiveUsers((prev) => ({ ...prev, [userId]: lastSeen }));
+  };
 
   const value = {
     userData,
@@ -109,7 +84,8 @@ const AppContextProvider = (props) => {
     setChatVisible,
     messages,
     setMessages,
-    setChatData,
+    activeUsers,
+    updateActiveUsers,
   };
 
   return (
