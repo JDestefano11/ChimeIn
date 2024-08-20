@@ -21,7 +21,10 @@ const Login = () => {
   return (
     <div className="login-container">
       <div className="login-card">
-        <img className="logo" src={assets.logo_big} alt="Logo" />
+        <div className="logo-container">
+          <img className="logo" src={assets.applogo} alt="Logo" />
+          <span className="logo-text">Chime In</span>
+        </div>
         <h2 className="login-title">{currState}</h2>
         <form onSubmit={onSubmitHandler} className="login-form">
           {currState === "Sign up" && (
