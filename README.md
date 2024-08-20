@@ -1,26 +1,23 @@
-# ChatApp
+# ChimeIn - React Firebase Chat App
+
+ChimeIn is a modern real-time chat application built with React and Firebase. It offers a seamless messaging experience with a clean, responsive interface. Key features include user authentication, real-time messaging, profile management, image sharing, and contact management. The app leverages React 18.3, Vite 5.4, and Firebase to deliver a fast, secure, and efficient communication platform. With its intuitive design and powerful functionality, ChimeIn is suitable for both personal and professional use, providing instant communication in a sleek, modern package.
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Features](#features)
-   - [User Authentication](#user-authentication)
-   - [User Profile](#user-profile)
-   - [Chat Functionality](#chat-functionality)
-   - [Contact Management](#contact-management)
-   - [User Interface](#user-interface)
-   - [Media Handling](#media-handling)
-   - [Real-Time Updates](#real-time-updates)
-   - [Navigation](#navigation)
-3. [Dependencies](#dependencies)
-4. [Installation](#installation)
-5. [Usage](#usage)
-6. [Contributing](#contributing)
-7. [License](#license)
-
-## Overview
-
-ChatApp is a real-time messaging application that allows users to sign up, log in, and interact with others through text and media. The app features a responsive design, real-time updates, and a user-friendly interface for seamless communication.
+- [Features](#features)
+  - [User Authentication](#user-authentication)
+  - [User Profile](#user-profile)
+  - [Chat Functionality](#chat-functionality)
+  - [Contact Management](#contact-management)
+  - [User Interface](#user-interface)
+  - [Media Handling](#media-handling)
+  - [Real-Time Updates](#real-time-updates)
+  - [Navigation](#navigation)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Scripts](#scripts)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
 
 ## Features
 
@@ -74,39 +71,38 @@ ChatApp is a real-time messaging application that allows users to sign up, log i
 - Profile Update: Navigate to update your profile.
 - Logout: Option to log out of the application.
 
-## Dependencies
+## Tech Stack
 
-This project relies on the following dependencies:
+- React 18.3
+- Vite 5.4
+- Firebase (Authentication, Firestore, Storage)
+- ESLint for code quality
+- CSS for styling
 
-- @fortawesome/fontawesome-svg-core: ^6.6.0
-- @fortawesome/free-solid-svg-icons: ^6.6.0
-- @fortawesome/react-fontawesome: ^0.2.2
-- firebase: ^10.12.5
-- react: ^18.3.1
-- react-dom: ^18.3.1
-- react-icons: ^5.2.1
-- react-router: ^6.26.0
-- react-router-dom: ^6.26.0
-- react-toastify: ^10.0.5
+## Getting Started
 
-## Installation
+1. Clone the repository
+2. Install dependencies:
+3. Run the development server:
 
-1. Clone the repository:
+## Scripts
 
-   ```bash
-   git clone https://github.com/yourusername/chatapp.git
-   Navigate into the project directory:
+- `npm run dev`: Start the development server
+- `npm run build`: Build for production
+- `npm run lint`: Run ESLint
+- `npm run preview`: Preview the production build
 
-   ```
+## Project Structure
 
-2. Navigate to project directory: cd chatapp
+- `src/`: Source files
+- `App.jsx`: Main application component
+- `main.jsx`: Entry point
+- `config/firebase.js`: Firebase configuration and utility functions
+- `lib/upload.js`: File upload utility
+- `public/`: Public assets
+- `vite.config.js`: Vite configuration
+- `eslint.config.js`: ESLint configuration
 
-3. Install dependencies: npm install
+## Contributing
 
-4. Start the application: npm start
-
-Usage
-Sign Up/Login: Create an account or log in to start using the chat features.
-Profile Management: Update your profile details and picture.
-Chat: Start and manage conversations, send messages, and share media.
-Navigation: Use the sidebar to navigate through chats and update your profile.
+Contributions are welcome! Please feel free to submit a Pull Request.
