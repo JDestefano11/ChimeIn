@@ -15,6 +15,9 @@ import add_icon from './add_icon.png'
 import menu_icon from './menu_icon.png'
 import arrow_icon from './arrow_icon.png'
 import green_dot from './green_dot.png'
+import ChimeIn1 from './ChimeIn (3).png'
+import logoapp from './logoapp.png'
+import applogo from './ChimeIn (5).png'
 
 const assets = {
     avatar_icon,
@@ -24,7 +27,6 @@ const assets = {
     logo_icon,
     logo,
     pic1,
-    pic2,
     pic3,
     pic4,
     profile_img,
@@ -33,7 +35,10 @@ const assets = {
     add_icon,
     menu_icon,
     arrow_icon,
-    green_dot
+    green_dot,
+    ChimeIn1,
+    logoapp,
+    applogo
 }
 
 export default assets;
