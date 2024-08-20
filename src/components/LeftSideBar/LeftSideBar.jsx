@@ -19,6 +19,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 const LeftSidebar = () => {
+  // Context and state management
   const {
     chatData,
     userData,
@@ -33,6 +34,7 @@ const LeftSidebar = () => {
   const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
 
+  // Handle search input
   const inputHandler = async (e) => {
     try {
       const input = e.target.value.toLowerCase();
@@ -64,6 +66,7 @@ const LeftSidebar = () => {
     }
   };
 
+  // Add a new chat
   const addChat = async (user) => {
     const messagesRef = collection(db, "messages");
     const chatsRef = collection(db, "chats");
@@ -116,6 +119,7 @@ const LeftSidebar = () => {
     }
   };
 
+  // Set active chat
   const setChat = async (item) => {
     setMessagesId(item.messageId);
     setChatUser(item);
@@ -132,6 +136,7 @@ const LeftSidebar = () => {
     setChatVisible(true);
   };
 
+  // Update chat user data when chatData changes
   useEffect(() => {
     const updateChatUserData = async () => {
       if (chatUser) {
@@ -144,6 +149,7 @@ const LeftSidebar = () => {
     updateChatUserData();
   }, [chatData]);
 
+  // Format timestamp to readable time
   const formatTime = (timestamp) => {
     if (!timestamp) return "";
     const date = new Date(timestamp);
@@ -154,6 +160,7 @@ const LeftSidebar = () => {
     hours = hours ? hours : 12;
     return `${hours}:${minutes} ${ampm}`;
   };
+
   return (
     <div className={`ls ${chatVisible ? "hidden" : ""}`}>
       <div className="ls-top">
