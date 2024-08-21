@@ -2,7 +2,7 @@
   "name": "react-firebase-chat-app",
   "private": true,
   "version": "0.0.0",
-  "homepage": "http://JDestefano11/ChimeIn",
+  "homepage": "http://JDestefano11.github.io/ChimeIn",
   "type": "module",
   "scripts": {
     "dev": "vite",
