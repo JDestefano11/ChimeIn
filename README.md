@@ -84,6 +84,7 @@ ChimeIn is a modern real-time chat application built with React and Firebase. It
 1. Clone the repository
 2. Install dependencies:
 3. Run the development server:
+4. Visit the live app: https://chimein-oo157cmw2-jdestefano11s-projects.vercel.app/#/
 
 ## Scripts
 
