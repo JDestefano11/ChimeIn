@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import "./LeftSidebar.css";
+import "./LeftSideBar.css";
 import assets from "../../../public/assets/assets";
 import { AppContext } from "../../context/AppContext";
 import { toast } from "react-toastify";
