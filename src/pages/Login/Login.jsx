@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "./Login.css";
-import assets from "../../../public/assets/assets";
+import logo from "/assets/logo.svg";
 import { signup, login, resetPass } from "../../config/firebase";
 
 const Login = () => {
@@ -22,7 +22,7 @@ const Login = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="logo-container">
-          <img className="logo" src={assets.applogo} alt="Logo" />
+          <img src={logo} alt="Chime In Logo" className="logo" />
           <span className="logo-text">Chime In</span>
         </div>
         <h2 className="login-title">{currState}</h2>
@@ -70,12 +70,14 @@ const Login = () => {
           </button>
         </form>
         <div className="login-options">
-          <div className="login-term">
-            <input type="checkbox" id="terms" />
-            <label htmlFor="terms">
-              I agree to the terms of use & privacy policy
-            </label>
-          </div>
+          {currState === "Sign up" && (
+            <div className="login-term">
+              <input type="checkbox" id="terms" required />
+              <label htmlFor="terms">
+                I agree to the terms of use & privacy policy
+              </label>
+            </div>
+          )}
           <div className="login-toggle">
             {currState === "Sign up" ? (
               <p>
@@ -85,9 +87,7 @@ const Login = () => {
             ) : (
               <p>
                 Don't have an account?{" "}
-                <span onClick={() => setCurrState("Sign up")}>
-                  Sign up here
-                </span>
+                <span onClick={() => setCurrState("Sign up")}>Sign up here</span>
               </p>
             )}
           </div>
