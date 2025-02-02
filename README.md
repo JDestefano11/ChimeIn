@@ -18,6 +18,7 @@ ChimeIn is a modern real-time chat application built with React and Firebase. It
 - [Scripts](#scripts)
 - [Project Structure](#project-structure)
 - [Contributing](#contributing)
+- [Contact](#contact)
 
 ## Features
 
@@ -84,6 +85,7 @@ ChimeIn is a modern real-time chat application built with React and Firebase. It
 1. Clone the repository
 2. Install dependencies:
 3. Run the development server:
+4. Visit the live app: https://chimein-oo157cmw2-jdestefano11s-projects.vercel.app/#/
 
 ## Scripts
 
@@ -103,6 +105,13 @@ ChimeIn is a modern real-time chat application built with React and Firebase. It
 - `vite.config.js`: Vite configuration
 - `eslint.config.js`: ESLint configuration
 
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+  ## Contact
+- Joe Destefano
+- Email: joedestefano.webdev@gmail.com
+- GitHub: [JDestefano11](https://github.com/JDestefano11)
+- LinkedIn: [Joe Destefano](https://www.linkedin.com/in/joeadestefano/)
